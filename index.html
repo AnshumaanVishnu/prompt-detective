@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Detective</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .tab-active {
+            background-color: #4f46e5;
+            color: white;
+        }
+        .tab-inactive {
+            background-color: #374151;
+            color: #d1d5db;
+        }
+        .sub-tab-active {
+            background-color: #4338ca;
+            color: white;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4f46e5;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.75);
+        }
+        .verdict-ai { background-color: #b91c1c; color: white; }
+        .verdict-human { background-color: #047857; color: white; }
+        .verdict-mixed { background-color: #a16207; color: white; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center justify-between p-4 sm:p-8">
+
+    <div class="w-full max-w-4xl">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">Prompt Detective</h1>
+            <p class="text-gray-400 mt-2">From creation to code: We find the prompt.</p>
+        </header>
+
+        <!-- Main Application -->
+        <main class="bg-gray-800 rounded-2xl shadow-2xl p-6 sm:p-8 w-full">
+            
+            <!-- Mode Toggle -->
+            <div class="flex justify-center mb-6 bg-gray-700 rounded-lg p-1 max-w-sm mx-auto">
+                <button id="image-tab" class="w-1/2 py-2 rounded-md text-sm font-medium transition-colors tab-active">Image Analysis</button>
+                <button id="text-tab" class="w-1/2 py-2 rounded-md text-sm font-medium transition-colors tab-inactive">Text Analysis</button>
+            </div>
+
+            <!-- Input Area -->
+            <div id="input-area">
+                <!-- Image Input -->
+                <div id="image-input-section">
+                    <div class="flex justify-center mb-4 bg-gray-700/50 rounded-lg p-1 max-w-xs mx-auto text-sm">
+                        <button id="image-upload-sub-tab" class="w-1/2 py-1 rounded-md transition-colors sub-tab-active">Upload File</button>
+                        <button id="image-url-sub-tab" class="w-1/2 py-1 rounded-md transition-colors">From URL</button>
+                    </div>
+                    <div id="image-upload-content">
+                        <div id="image-dropzone" class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-600 border-dashed rounded-xl cursor-pointer hover:border-indigo-500 transition-colors">
+                            <div class="space-y-1 text-center"><svg class="mx-auto h-12 w-12 text-gray-500" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg><div class="flex text-sm text-gray-400"><label for="image-upload-input" class="relative cursor-pointer bg-gray-700 rounded-md font-medium text-indigo-400 hover:text-indigo-300 px-2 py-1"><span>Upload a file</span><input id="image-upload-input" type="file" class="sr-only" accept="image/png, image/jpeg, image/webp"></label><p class="pl-1">or drag and drop</p></div><p class="text-xs text-gray-500">PNG, JPG, WEBP up to 10MB</p></div>
+                        </div>
+                    </div>
+                    <div id="image-url-content" class="hidden"><div class="flex gap-2"><input type="text" id="image-url-input" class="w-full p-3 bg-gray-900 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="https://... Paste image URL here"><button id="fetch-image-button" class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-lg">Load</button></div></div>
+                    <div id="image-preview-container" class="hidden mt-4 text-center"><img id="image-preview" src="#" alt="Image Preview" class="max-w-xs mx-auto rounded-lg shadow-lg"/></div>
+                </div>
+
+                <!-- Text Input -->
+                <div id="text-input-section" class="hidden">
+                     <div class="flex justify-center mb-4 bg-gray-700/50 rounded-lg p-1 max-w-md mx-auto text-sm">
+                        <button id="text-paste-sub-tab" class="w-1/3 py-1 rounded-md transition-colors sub-tab-active">Paste Text</button>
+                        <button id="text-url-sub-tab" class="w-1/3 py-1 rounded-md transition-colors">From URL</button>
+                        <button id="text-upload-sub-tab" class="w-1/3 py-1 rounded-md transition-colors">Upload File</button>
+                    </div>
+                    
+                    <div id="text-paste-content">
+                        <textarea id="text-input-area" rows="8" class="w-full p-4 bg-gray-900 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Paste the content here..."></textarea>
+                    </div>
+                    
+                    <div id="text-url-content" class="hidden">
+                        <div class="flex gap-2">
+                            <input type="text" id="text-url-input" class="w-full p-3 bg-gray-900 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="https://... Paste article URL here">
+                            <button id="fetch-text-button" class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-lg">Fetch</button>
+                        </div>
+                    </div>
+
+                    <div id="text-upload-content" class="hidden">
+                         <label for="text-upload-input" class="mt-1 flex justify-center w-full px-6 pt-5 pb-6 border-2 border-gray-600 border-dashed rounded-xl cursor-pointer hover:border-indigo-500 transition-colors">
+                            <div class="space-y-1 text-center"><svg class="mx-auto h-12 w-12 text-gray-500" stroke="currentColor" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg><p class="text-sm text-gray-400">Click to upload a file</p><p class="text-xs text-gray-500">.txt, .md, and other plain text files</p></div>
+                            <input id="text-upload-input" type="file" class="sr-only" accept=".txt,.md,text/plain">
+                        </label>
+                    </div>
+                    <div class="text-right text-sm text-gray-400 mt-2" id="word-count-display">Word Count: 0 / 5000</div>
+                </div>
+            </div>
+
+            <!-- Analyze Button -->
+            <div class="mt-8 text-center">
+                <button id="analyze-button" class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-bold py-3 px-8 rounded-lg shadow-md transition-all duration-300 transform hover:scale-105">
+                    Analyze
+                </button>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results-section" class="mt-8 pt-6 border-t border-gray-700 hidden">
+                <div id="loader" class="loader mx-auto my-4 hidden"></div>
+                <div id="result-content" class="hidden">
+                    <h3 class="text-lg font-semibold text-gray-200 mb-2 text-center">Verdict</h3>
+                    <div id="verdict-box" class="p-3 rounded-lg text-center font-bold text-lg mb-6"><span id="verdict-text"></span></div>
+                    <h3 class="text-lg font-semibold text-gray-200 mb-2">Plausible Prompt</h3>
+                    <div class="relative bg-gray-900 p-4 rounded-lg font-mono text-sm text-gray-300 mb-6"><pre id="testable-prompt" class="whitespace-pre-wrap"></pre><button id="copy-button" class="absolute top-2 right-2 bg-gray-700 hover:bg-gray-600 text-gray-300 p-2 rounded-md text-xs">Copy</button></div>
+                    <h3 class="text-lg font-semibold text-gray-200 mb-2">Forensic Analysis</h3>
+                    <div id="detailed-analysis" class="bg-gray-900 p-4 rounded-lg whitespace-pre-wrap text-gray-300 text-sm leading-relaxed"></div>
+                </div>
+                <div id="error-message" class="bg-red-900 border border-red-700 text-red-300 p-4 rounded-lg hidden"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="w-full max-w-4xl text-center text-gray-500 text-sm mt-8 py-4">
+        <div class="mb-2">A project by <a href="https://github.com/AnshumaanVishnu" target="_blank" rel="noopener noreferrer" class="text-indigo-400 hover:underline">Anshumaan Vishnu</a></div>
+        <div><button data-modal-target="about-modal" class="hover:text-gray-300 transition-colors">About</button> | <button data-modal-target="privacy-modal" class="hover:text-gray-300 transition-colors">Privacy Policy</button> | <button data-modal-target="terms-modal" class="hover:text-gray-300 transition-colors">Terms of Service</button> | <button data-modal-target="contact-modal" class="hover:text-gray-300 transition-colors">Contact</button></div>
+    </footer>
+
+    <!-- Modals -->
+    <div id="about-modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop"><div class="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full m-4 p-6 relative overflow-y-auto max-h-[80vh]"><h2 class="text-2xl font-bold mb-4 text-indigo-400">About Prompt Detective</h2><div class="space-y-4 text-gray-300"><p>In a world where AI-generated content is becoming common, Prompt Detective was created to foster transparency by investigating the origin of digital content.</p><p><strong class="text-indigo-300">The Plausible Prompt:</strong> Finding the <em>exact</em> prompt used to generate content is nearly impossible. Our solution is to generate a detailed, "plausible prompt" that could have created it, offering a strong signal about the content's origins.</p><p><strong class="text-indigo-300">Our Analysis Mechanism:</strong> To determine the origin, our system acts as a forensic analyst. It examines the submission for digital 'fingerprints'—subtle clues and artifacts. For images, it looks for tells like unnatural textures or strange anatomy. For text, it analyzes phrasing and tone. By weighing these indicators, it forms a verdict on whether the content is more likely from an AI or a human.</p><p><strong class="text-indigo-300">A Note on Accuracy:</strong> This tool provides a best-effort analysis, not a definitive judgment. The "verdict" is a probabilistic assessment and should be used as one data point among many in an evaluation.</p><p class="text-gray-200 font-semibold pt-2">Created with passion by Anshumaan Vishnu.</p></div><div class="flex space-x-4 mt-6"><a href="https://github.com/AnshumaanVishnu" target="_blank" rel="noopener noreferrer" class="text-indigo-400 hover:underline">GitHub Profile</a><a href="https://www.linkedin.com/in/anshumaanvishnu/" target="_blank" rel="noopener noreferrer" class="text-indigo-400 hover:underline">LinkedIn Profile</a></div><button class="modal-close absolute top-4 right-4 text-gray-500 hover:text-white">&times;</button></div></div>
+    <div id="privacy-modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop"><div class="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full m-4 p-6 relative overflow-y-auto max-h-[80vh]"><h2 class="text-2xl font-bold mb-4">Privacy Policy</h2><p class="text-gray-400 mb-2">Last updated: July 25, 2025</p><div class="space-y-4 text-gray-300"><p>We respect your privacy. This policy explains how we handle data in Prompt Detective.</p><p><strong class="text-gray-200">Data You Provide:</strong> Images and text you upload for analysis are sent directly to a third-party API (Google's Gemini model) for processing. We do not store, log, or save your uploaded content on our servers after the analysis is complete. The content is used solely for the purpose of generating a potential prompt and is discarded thereafter.</p><p><strong class="text-gray-200">Data We Collect Automatically:</strong> We do not use cookies or tracking technologies to collect personal information about you. We do not collect analytics on your usage.</p><p><strong class="text-gray-200">Third-Party Services:</strong> The analysis is performed by Google's Gemini API. Your use of this tool is also subject to Google's Privacy Policy and Terms of Service as it relates to their API services.</p><p><strong class="text-gray-200">Data Security:</strong> We use secure protocols (HTTPS) for data transmission. However, no method of transmission over the Internet is 100% secure. While we strive to protect your data, we cannot guarantee its absolute security.</p><p><strong class="text-gray-200">Changes to This Policy:</strong> We may update this policy from time to time. We will notify you of any changes by posting the new policy on this page.</p></div><button class="modal-close absolute top-4 right-4 text-gray-500 hover:text-white">&times;</button></div></div>
+    <div id="terms-modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop"><div class="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full m-4 p-6 relative overflow-y-auto max-h-[80vh]"><h2 class="text-2xl font-bold mb-4">Terms of Service</h2><p class="text-gray-400 mb-2">Last updated: July 25, 2025</p><div class="space-y-4 text-gray-300"><p><strong class="text-gray-200">1. Acceptance of Terms:</strong> By using Prompt Detective ("the Service"), you agree to be bound by these Terms of Service.</p><p><strong class="text-gray-200">2. Description of Service:</strong> The Service provides an estimated prompt that could have generated a given piece of text or an image. The results are generated by a computational model and are for informational purposes only. They are not a guarantee of the actual prompt used.</p><p><strong class="text-gray-200">3. Disclaimer of Warranty:</strong> The Service is provided "as is" without any warranties of any kind. We do not guarantee the accuracy, completeness, or reliability of any results. You use the Service at your own risk.</p><p><strong class="text-gray-200">4. Limitation of Liability:</strong> In no event shall the creator of Prompt Detective be liable for any direct, indirect, incidental, or consequential damages arising out of the use or inability to use the Service.</p><p><strong class="text-gray-200">5. User Conduct:</strong> You agree not to use the Service to analyze any content that is illegal, defamatory, or infringes on the rights of others, including intellectual property rights.</p></div><button class="modal-close absolute top-4 right-4 text-gray-500 hover:text-white">&times;</button></div></div>
+    <div id="contact-modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-backdrop"><div class="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full m-4 p-6 relative"><h2 class="text-2xl font-bold mb-4">Contact</h2><p class="text-gray-300 mb-4">For inquiries, feedback, or collaboration opportunities, please connect with the creator, Anshumaan Vishnu, via his professional profiles.</p<div class="flex space-x-4 mt-4"><a href="https://github.com/AnshumaanVishnu" target="_blank" rel="noopener noreferrer" class="text-indigo-400 hover:underline">GitHub</a><a href="https://www.linkedin.com/in/anshumaanvishnu/" target="_blank" rel="noopener noreferrer" class="text-indigo-400 hover:underline">LinkedIn</a></div><button class="modal-close absolute top-4 right-4 text-gray-500 hover:text-white">&times;</button></div></div>
+
+    <script type="module">
+        // --- DOM Element References ---
+        const imageTab = document.getElementById('image-tab');
+        const textTab = document.getElementById('text-tab');
+        const imageInputSection = document.getElementById('image-input-section');
+        const textInputSection = document.getElementById('text-input-section');
+        const imageUploadInput = document.getElementById('image-upload-input');
+        const imageDropzone = document.getElementById('image-dropzone');
+        const imagePreviewContainer = document.getElementById('image-preview-container');
+        const imagePreview = document.getElementById('image-preview');
+        const analyzeButton = document.getElementById('analyze-button');
+        const resultsSection = document.getElementById('results-section');
+        const loader = document.getElementById('loader');
+        const resultContent = document.getElementById('result-content');
+        const testablePromptEl = document.getElementById('testable-prompt');
+        const copyButton = document.getElementById('copy-button');
+        const detailedAnalysisEl = document.getElementById('detailed-analysis');
+        const errorMessage = document.getElementById('error-message');
+        const wordCountDisplay = document.getElementById('word-count-display');
+        const imageUploadSubTab = document.getElementById('image-upload-sub-tab');
+        const imageUrlSubTab = document.getElementById('image-url-sub-tab');
+        const imageUploadContent = document.getElementById('image-upload-content');
+        const imageUrlContent = document.getElementById('image-url-content');
+        const imageUrlInput = document.getElementById('image-url-input');
+        const fetchImageButton = document.getElementById('fetch-image-button');
+        const verdictBox = document.getElementById('verdict-box');
+        const verdictText = document.getElementById('verdict-text');
+        // Text analysis elements
+        const textInputArea = document.getElementById('text-input-area');
+        const textPasteSubTab = document.getElementById('text-paste-sub-tab');
+        const textUrlSubTab = document.getElementById('text-url-sub-tab');
+        const textUploadSubTab = document.getElementById('text-upload-sub-tab');
+        const textPasteContent = document.getElementById('text-paste-content');
+        const textUrlContent = document.getElementById('text-url-content');
+        const textUploadContent = document.getElementById('text-upload-content');
+        const textUrlInput = document.getElementById('text-url-input');
+        const fetchTextButton = document.getElementById('fetch-text-button');
+        const textUploadInput = document.getElementById('text-upload-input');
+
+        // --- State Management ---
+        let currentMode = 'image';
+        let base64ImageData = null;
+        const MAX_WORDS = 5000;
+
+        // --- Event Listeners ---
+        imageTab.addEventListener('click', () => switchMode('image'));
+        textTab.addEventListener('click', () => switchMode('text'));
+        analyzeButton.addEventListener('click', handleAnalysis);
+        copyButton.addEventListener('click', copyPromptToClipboard);
+        
+        // Image Input Listeners
+        imageUploadSubTab.addEventListener('click', () => switchImageInputMode('upload'));
+        imageUrlSubTab.addEventListener('click', () => switchImageInputMode('url'));
+        imageUploadInput.addEventListener('change', handleFileSelect);
+        imageDropzone.addEventListener('click', () => imageUploadInput.click());
+        imageDropzone.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); imageDropzone.classList.add('border-indigo-500'); });
+        imageDropzone.addEventListener('dragleave', (e) => { e.preventDefault(); e.stopPropagation(); imageDropzone.classList.remove('border-indigo-500'); });
+        imageDropzone.addEventListener('drop', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            imageDropzone.classList.remove('border-indigo-500');
+            if (e.dataTransfer.files.length > 0) {
+                imageUploadInput.files = e.dataTransfer.files;
+                handleFileSelect({ target: imageUploadInput });
+            }
+        });
+        fetchImageButton.addEventListener('click', handleFetchImageFromUrl);
+
+        // Text Input Listeners
+        textInputArea.addEventListener('input', updateWordCount);
+        textPasteSubTab.addEventListener('click', () => switchTextInputMode('paste'));
+        textUrlSubTab.addEventListener('click', () => switchTextInputMode('url'));
+        textUploadSubTab.addEventListener('click', () => switchTextInputMode('upload'));
+        fetchTextButton.addEventListener('click', handleFetchTextFromUrl);
+        textUploadInput.addEventListener('change', handleTextFileSelect);
+
+        // Modal Listeners
+        document.querySelectorAll('[data-modal-target]').forEach(b => b.addEventListener('click', () => { const m = document.getElementById(b.dataset.modalTarget); m.classList.remove('hidden'); m.classList.add('flex'); }));
+        document.querySelectorAll('.modal-close').forEach(b => b.addEventListener('click', () => { const m = b.closest('.fixed'); m.classList.add('hidden'); m.classList.remove('flex'); }));
+        window.addEventListener('click', (e) => { if (e.target.classList.contains('modal-backdrop')) { e.target.classList.add('hidden'); e.target.classList.remove('flex'); } });
+
+        // --- Functions ---
+        function switchMode(mode) {
+            currentMode = mode;
+            imageTab.classList.toggle('tab-active', mode === 'image');
+            imageTab.classList.toggle('tab-inactive', mode !== 'image');
+            textTab.classList.toggle('tab-active', mode === 'text');
+            textTab.classList.toggle('tab-inactive', mode !== 'text');
+            imageInputSection.classList.toggle('hidden', mode !== 'image');
+            textInputSection.classList.toggle('hidden', mode !== 'text');
+            resetResults();
+        }
+
+        function switchImageInputMode(mode) {
+            imageUploadSubTab.classList.toggle('sub-tab-active', mode === 'upload');
+            imageUrlSubTab.classList.toggle('sub-tab-active', mode === 'url');
+            imageUploadContent.classList.toggle('hidden', mode !== 'upload');
+            imageUrlContent.classList.toggle('hidden', mode !== 'url');
+            resetImageState();
+            resetResults();
+        }
+        
+        function switchTextInputMode(mode) {
+            textPasteSubTab.classList.toggle('sub-tab-active', mode === 'paste');
+            textUrlSubTab.classList.toggle('sub-tab-active', mode === 'url');
+            textUploadSubTab.classList.toggle('sub-tab-active', mode === 'upload');
+            textPasteContent.classList.toggle('hidden', mode !== 'paste');
+            textUrlContent.classList.toggle('hidden', mode !== 'url');
+            textUploadContent.classList.toggle('hidden', mode !== 'upload');
+            resetResults();
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target.result;
+                imagePreviewContainer.classList.remove('hidden');
+                base64ImageData = e.target.result.split(',')[1];
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function handleFetchImageFromUrl() {
+            const url = imageUrlInput.value.trim();
+            if (!url) { showError("Please enter an image URL."); return; }
+            resetImageState();
+            resetResults();
+            
+            fetchImageButton.disabled = true;
+            fetchImageButton.textContent = 'Loading...';
+            
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+
+            try {
+                const response = await fetch(proxyUrl);
+                if (!response.ok) throw new Error(`Could not fetch image. Status: ${response.status}`);
+                const blob = await response.blob();
+                
+                if (blob.size === 0) {
+                    throw new Error("Fetched file is empty.");
+                }
+                
+                if (blob.type && !blob.type.startsWith('image/')) {
+                     console.warn(`Content-Type is '${blob.type}'. Attempting to render anyway.`);
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    imagePreviewContainer.classList.remove('hidden');
+                    base64ImageData = e.target.result.split(',')[1];
+                };
+                reader.onerror = () => { throw new Error("Could not read the fetched image file."); };
+                reader.readAsDataURL(blob);
+            } catch (error) {
+                console.error("Fetch Image Error:", error);
+                showError(`Could not load image from URL. ${error.message}`);
+            } finally {
+                fetchImageButton.disabled = false;
+                fetchImageButton.textContent = 'Load';
+            }
+        }
+
+        function handleTextFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                textInputArea.value = e.target.result;
+                updateWordCount();
+                switchTextInputMode('paste'); // Switch back to paste view to show content
+            };
+            reader.onerror = () => { showError("Error reading the text file."); };
+            reader.readAsText(file);
+        }
+        
+        async function handleFetchTextFromUrl() {
+            const url = textUrlInput.value.trim();
+            if (!url) { showError("Please enter an article URL."); return; }
+            resetResults();
+            
+            fetchTextButton.disabled = true;
+            fetchTextButton.textContent = 'Fetching...';
+            
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+
+            try {
+                const response = await fetch(proxyUrl);
+                if (!response.ok) throw new Error(`Failed to fetch the article. Status: ${response.status}`);
+                
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                doc.querySelectorAll('script, style, nav, header, footer, aside, form, noscript').forEach(el => el.remove());
+                
+                const mainContent = doc.querySelector('article, main, [role="main"], .post, .entry-content, #content, #main');
+                let text = ((mainContent || doc.body).textContent || "").replace(/\s\s+/g, ' ').trim();
+
+                if (!text) throw new Error("Could not extract meaningful text from the URL.");
+
+                textInputArea.value = text;
+                updateWordCount();
+                switchTextInputMode('paste');
+
+            } catch(error) {
+                console.error("Fetch Text Error:", error);
+                showError(error.message);
+            } finally {
+                fetchTextButton.disabled = false;
+                fetchTextButton.textContent = 'Fetch';
+            }
+        }
+
+        function updateWordCount() {
+            const text = textInputArea.value;
+            const words = text.trim().split(/\s+/).filter(word => word.length > 0);
+            const wordCount = words.length;
+            wordCountDisplay.textContent = `Word Count: ${wordCount} / ${MAX_WORDS}`;
+            wordCountDisplay.classList.toggle('text-red-500', wordCount > MAX_WORDS);
+        }
+        
+        function copyPromptToClipboard() {
+            const textToCopy = testablePromptEl.innerText;
+            const textArea = document.createElement('textarea');
+            textArea.value = textToCopy;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            copyButton.textContent = 'Copied!';
+            setTimeout(() => { copyButton.textContent = 'Copy'; }, 2000);
+        }
+
+        function resetResults() {
+            resultsSection.classList.add('hidden');
+            resultContent.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+            loader.classList.add('hidden');
+        }
+
+        function resetImageState() {
+            base64ImageData = null;
+            imagePreview.src = '#';
+            imagePreviewContainer.classList.add('hidden');
+            imageUploadInput.value = '';
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+            resultContent.classList.add('hidden');
+        }
+
+        function displayResults(data) {
+            verdictText.textContent = data.verdict;
+            verdictBox.className = 'p-3 rounded-lg text-center font-bold text-lg mb-6'; // Reset classes
+            switch (data.verdict.toLowerCase().trim()) {
+                case 'likely ai-generated': verdictBox.classList.add('verdict-ai'); break;
+                case 'likely human-created': verdictBox.classList.add('verdict-human'); break;
+                default: verdictBox.classList.add('verdict-mixed');
+            }
+            testablePromptEl.textContent = data.plausiblePrompt;
+            detailedAnalysisEl.textContent = data.forensicAnalysis;
+            resultContent.classList.remove('hidden');
+        }
+
+        async function callGeminiAPI(payload) {
+            const apiKey = ""; // Leave empty as per instructions
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                let errorText = await response.text();
+                let errorMessage = `API request failed with status ${response.status}`;
+                if (errorText) {
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        if (errorData.error && errorData.error.message) {
+                            errorMessage += `: ${errorData.error.message}`;
+                        } else {
+                            errorMessage += `: ${errorText}`;
+                        }
+                    } catch (e) {
+                        errorMessage += `: ${errorText}`;
+                    }
+                }
+                throw new Error(errorMessage);
+            }
+
+            const result = await response.json();
+
+            if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+                return JSON.parse(result.candidates[0].content.parts[0].text);
+            } else {
+                if (result.candidates?.[0]?.finishReason === 'SAFETY') {
+                    throw new Error("The analysis was blocked for safety reasons. Please try different content.");
+                }
+                throw new Error("The API returned an unexpected or empty response.");
+            }
+        }
+
+        async function handleAnalysis() {
+            resetResults();
+            resultsSection.classList.remove('hidden');
+            loader.classList.remove('hidden');
+            analyzeButton.disabled = true;
+
+            try {
+                const jsonSchema = { type: "OBJECT", properties: { "verdict": { "type": "STRING", "description": "Your final judgment: 'Likely AI-Generated', 'Likely Human-Created', or 'Ambiguous/Mixed Origin'." }, "plausiblePrompt": { "type": "STRING", "description": "The most likely prompt that could have created this content. If human-created, this can be a description of the content." }, "forensicAnalysis": { "type": "STRING", "description": "A detailed analysis explaining your verdict. List specific indicators for and against AI origin (e.g., 'Indicators of AI: unnaturally smooth gradients, perfect symmetry...', 'Indicators of Human: subtle imperfections, specific cultural references...')." } }, required: ["verdict", "plausiblePrompt", "forensicAnalysis"] };
+                let systemPrompt;
+                let parts = [];
+
+                if (currentMode === 'image') {
+                    if (!base64ImageData) throw new Error("Please upload or load an image first.");
+                    systemPrompt = "You are a digital content forensic analyst. Analyze this image to determine if it was created by a human or a generative AI. Look for artifacts like unnatural textures, strange anatomy (especially hands), flawless symmetry, nonsensical text, or overly perfect composition as signs of AI. Look for subtle imperfections, authentic lighting, and logical details as signs of human creation. Provide your findings in a structured JSON format.";
+                    parts.push({ text: systemPrompt });
+                    parts.push({ inlineData: { mimeType: "image/jpeg", data: base64ImageData } });
+                } else {
+                    const textContent = textInputArea.value;
+                    if (!textContent.trim()) throw new Error("Please paste, upload, or fetch some text to analyze.");
+                    if (textContent.trim().split(/\s+/).length > MAX_WORDS) throw new Error(`Text exceeds the ${MAX_WORDS} word limit.`);
+                    systemPrompt = `You are a text forensic analyst. Analyze this text to determine if it was written by a human or a generative AI. Look for overly generic phrasing, unusual consistency in tone, lack of personal voice, or factually correct but contextually odd statements as signs of AI. Look for varied sentence structure, idiomatic expressions, and a clear personal perspective as signs of human writing. Provide your findings in a structured JSON format.`;
+                    parts.push({ text: `System Prompt: ${systemPrompt}\n\nText to Analyze:\n---\n${textContent}` });
+                }
+                
+                const payload = { contents: [{ role: "user", parts: parts }], generationConfig: { responseMimeType: "application/json", responseSchema: jsonSchema } };
+                
+                const data = await callGeminiAPI(payload);
+                displayResults(data);
+
+            } catch (error) {
+                console.error("Analysis Error:", error);
+                showError(`Error: ${error.message}`);
+            } finally {
+                loader.classList.add('hidden');
+                analyzeButton.disabled = false;
+            }
+        }
+        
+        // Initial setup
+        updateWordCount();
+    </script>
+</body>
+</html>
